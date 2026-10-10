@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الخطاطة الشاملة للظواهر اللغوية في اللغة العربية</title>
+    
+    <!-- تحميل خط تجوال من جوجل لدعم العربية بجمالية -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- تحميل مكتبة Tailwind CSS للتصميم -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- تحميل مكتبة D3.js للرسم البياني والخرائط الذهنية -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <style>
+        body { 
+            font-family: 'Tajawal', sans-serif; 
+            background-color: #f8fafc; 
+            margin: 0; 
+            overflow: hidden; 
+        }
+        
+        #mindmap-container {
+            width: 100vw;
+            height: 100vh;
+            cursor: grab;
+        }
+        #mindmap-container:active {
+            cursor: grabbing;
+        }
+
+        .link {
+            fill: none;
+            stroke: #cbd5e1;
+            stroke-width: 3px;
+            transition: stroke 0.3s ease;
+        }
+        
+        .link:hover {
+            stroke: #60a5fa;
+            stroke-width: 4px;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        /* منع التحديد العشوائي للنصوص أثناء سحب الخريطة */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+    </style>
+</head>
+<body class="relative">
+
+    <!-- العنوان -->
+    <div class="fixed top-6 right-6 z-50 bg-white/90 backdrop-blur-md p-5 rounded-2xl shadow-lg border border-slate-100 pointer-events-none">
+        <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">الخطاطة الشاملة للغة العربية</h1>
+        <p class="text-slate-500 font-medium mt-2 flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-blue-500 inline-block animate-pulse"></span>
+            خريطة ذهنية تفاعلية للصرف والنحو
+        </p>
+    </div>
+
+    <!-- أزرار التحكم -->
+    <div class="fixed bottom-6 right-6 z-50 flex gap-3 flex-row-reverse bg-white/90 backdrop-blur-md p-3 rounded-xl shadow-lg border border-slate-100">
+        <button id="zoom-in" class="bg-slate-50 p-3 rounded-lg shadow-sm hover:bg-blue-50 text-blue-600 transition-colors border border-slate-200" title="تكبير">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        </button>
+        <button id="zoom-out" class="bg-slate-50 p-3 rounded-lg shadow-sm hover:bg-blue-50 text-blue-600 transition-colors border border-slate-200" title="تصغير">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+        </button>
+        <div class="w-px bg-slate-300 mx-1"></div>
+        <button id="expand-all" class="bg-slate-50 px-5 py-2 rounded-lg shadow-sm hover:bg-blue-50 text-blue-700 font-bold transition-colors border border-slate-200 text-sm">توسيع الكل</button>
+        <button id="collapse-all" class="bg-slate-50 px-5 py-2 rounded-lg shadow-sm hover:bg-blue-50 text-slate-700 font-bold transition-colors border border-slate-200 text-sm">طي الفروع</button>
+        <button id="reset-zoom" class="bg-blue-600 px-5 py-2 rounded-lg shadow-md hover:bg-blue-700 text-white font-bold transition-colors text-sm">إعادة التمركز</button>
+    </div>
+
+    <!-- حاوية الخريطة الذهنية -->
+    <div id="mindmap-container"></div>
+
+    <script>
+        // هيكل البيانات الشامل لجميع ظواهر اللغة العربية
+        const treeData = {
+            name: "اللغة العربية",
+            desc: "تعتمد في بنائها على مستويين رئيسيين: الكلمة والجملة.",
+            children: [
+                {
+                    name: "1. الكلمة (علم الصرف)",
+                    desc: "أقسام الكلام وما يدل على معنى مفرد.",
+                    children: [
+                        {
+                            name: "الفِعْل",
+                            desc: "ما دل على حدث مقترن بزمن.",
+                            children: [
+                                {
+                                    name: "من حيث الزمن",
+                                    children: [
+                                        { name: "الماضي", desc: "مبني دائماً", example: "مثال: كَتَبَ" },
+                                        { name: "المضارع", desc: "معرب غالباً ومبني في حالتين", example: "مثال: يَكْتُبُ" },
+                                        { name: "الأمر", desc: "مبني دائماً", example: "مثال: اُكْتُبْ" }
+                                    ]
+                                },
+                                {
+                                    name: "من حيث البنية (الصحة والاعتلال)",
+                                    children: [
+                                        {
+                                            name: "فعل صحيح (خالٍ من العلة)",
+                                            children: [
+                                                { name: "سالم", desc: "سلم من الهمز والتضعيف", example: "كتب، جلس" },
+                                                { name: "مهموز", desc: "أحد أصوله همزة", example: "أخذ، سأل، قرأ" },
+                                                { name: "مضعف", desc: "حرفاه الثاني والثالث من جنس واحد", example: "مدّ، عدّ" }
+                                            ]
+                                        },
+                                        {
+                                            name: "فعل معتل (أحد أصوله حرف علة)",
+                                            children: [
+                                                { name: "مثال", desc: "معتل الأول", example: "وَجَدَ، وَعَدَ" },
+                                                { name: "أجوف", desc: "معتل الوسط", example: "قَالَ، صَامَ" },
+                                                { name: "ناقص", desc: "معتل الآخر", example: "رَمَى، دَعَا" },
+                                                { name: "لفيف مقرون", desc: "حرفا علة متجاوران", example: "طَوَى، رَوَى" },
+                                                { name: "لفيف مفروق", desc: "حرفا علة بينهما صحيح", example: "وَقَى، وَعَى" }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    name: "من حيث اللزوم والتعدي",
+                                    children: [
+                                        { name: "فعل لازم", desc: "يكتفي بفاعله ولا يحتاج مفعولاً به", example: "نام الطفلُ" },
+                                        { name: "فعل متعدٍ", desc: "يحتاج إلى مفعول به أو أكثر ليكتمل المعنى", example: "أكل الولدُ تفاحةً" }
+                                    ]
+                                },
+                                {
+                                    name: "من حيث الفاعل",
+                                    children: [
+                                        { name: "مبني للمعلوم", desc: "فاعله معروف وموجود", example: "فَهِمَ الطالبُ الدرسَ" },
+                                        { name: "مبني للمجهول", desc: "فاعله محذوف ويأخذ نائب فاعل", example: "فُهِـمَ الدرسُ" }
+                                    ]
+                                },
+                                {
+                                    name: "من حيث التجرد والزيادة",
+                                    children: [
+                                        { name: "مجرد", desc: "جميع حروفه أصلية", example: "عَلِمَ، دَحْرَجَ" },
+                                        { name: "مزيد", desc: "زيد على حروفه الأصلية حرف أو أكثر", example: "اسْتَعْلَمَ، أَكْرَمَ" }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            name: "الاسْم",
+                            desc: "ما دل على معنى غير مقترن بزمن.",
+                            children: [
+                                { name: "من حيث النوع", children: [{name: "مذكر", example: "رجل، كتاب"}, {name: "مؤنث", example: "امرأة، شجرة"}] },
+                                { name: "من حيث العدد", children: [{name: "مفرد", example: "قلم"}, {name: "مثنى", example: "قلمان"}, {name: "جمع", desc: "مذكر سالم، مؤنث سالم، تكسير"}] },
+                                { name: "من حيث التعيين", children: [{name: "نكرة", example: "رجلٌ"}, {name: "معرفة", desc: "العَلَم، الضمائر، أسماء الإشارة، الأسماء الموصولة، المعرف بـ أل، المضاف إلى معرفة"}] },
+                                { name: "من حيث البناء والإعراب", children: [{name: "معرب", desc: "يتغير آخره بتغير موقعه"}, {name: "مبني", desc: "يلزم حالة واحدة (كالضمائر)"}] },
+                                {
+                                    name: "المشتقات",
+                                    desc: "أسماء مأخوذة من الأفعال",
+                                    children: [
+                                        { name: "اسم الفاعل", example: "كَاتِب، مُسْتَمِع" },
+                                        { name: "اسم المفعول", example: "مَكْتُوب، مُسْتَخْرَج" },
+                                        { name: "صيغ المبالغة", example: "غَفُور، رَحِيم، حَذِر" },
+                                        { name: "اسم التفضيل", example: "أَكْبَر، أَفْضَل" },
+                                        { name: "اسما الزمان والمكان", example: "مَجْلِس، مَلْعَب" },
+                                        { name: "اسم الآلة", example: "مِفْتَاح، مِقَصّ" }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            name: "الحَرْف",
+                            desc: "ما لا يظهر معناه كاملاً إلا مع غيره.",
+                            children: [
+                                { name: "حروف الجر", example: "مِن، إلى، عَن، على، فِي، الباء، الكاف، اللام" },
+                                { name: "حروف العطف", example: "الواو، الفاء، ثُمَّ، أو، أم، بل، لا، لكن" },
+                                { name: "حروف النصب والجزم", desc: "تدخل على الفعل المضارع", example: "أن، لن، لم، لا الناهية" },
+                                { name: "الحروف الناسخة", desc: "تدخل على الجملة الاسمية", example: "إنّ، أن، كأن، لكن، ليت، لعل" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    name: "2. الجملة (التركيب النحوي)",
+                    desc: "تتكون من تآلف الكلمات وتؤدي معنى تاماً.",
+                    children: [
+                        {
+                            name: "الجملة الفعلية",
+                            desc: "تبدأ بفعل، وتحتاج لفاعل (ومفعول به أحياناً)",
+                            example: "مثال تطبيقي شامل: رَمَى اللاعِبُ الكُرَةَ",
+                            children: [
+                                {
+                                    name: "الفعل",
+                                    desc: "الحدث. (في المثال أعلاه: رَمَى)",
+                                    example: "رمى: فعل ماضٍ مبني، نوعه معتل ناقص (آخره علة)"
+                                },
+                                {
+                                    name: "الفاعل",
+                                    desc: "من قام بالفعل. (في المثال: اللاعِبُ)",
+                                    example: "اللاعب: فاعل مرفوع وعلامة رفعه الضمة الظاهرة"
+                                },
+                                {
+                                    name: "المفعول به (عند الحاجة)",
+                                    desc: "من وقع عليه الفعل. (في المثال: الكُرَةَ)",
+                                    example: "الكرة: مفعول به منصوب (جاء لأن الفعل متعدٍ)"
+                                },
+                                {
+                                    name: "نائب الفاعل",
+                                    desc: "يحل محل الفاعل المرفوع إذا بُني الفعل للمجهول",
+                                    example: "مثال: رُمِيَتِ الكُرَةُ"
+                                }
+                            ]
+                        },
+                        {
+                            name: "الجملة الاسمية",
+                            desc: "تبدأ باسم، وتتكون من ركنين أساسيين.",
+                            children: [
+                                { name: "المبتدأ", desc: "الاسم الذي نتحدث عنه (مرفوع)", example: "العِلْمُ نورٌ" },
+                                { name: "الخبر", desc: "ما يكمل المعنى ويخبر عن المبتدأ", example: "أنواعه: مفرد، جملة، شبه جملة" },
+                                {
+                                    name: "النواسخ",
+                                    desc: "ما يدخل على الجملة الاسمية فيغير إعرابها",
+                                    children: [
+                                        { name: "الأفعال الناسخة (كان وأخواتها)", desc: "ترفع المبتدأ وتنصب الخبر", example: "كانَ الجوُّ جميلاً" },
+                                        { name: "الحروف الناسخة (إنّ وأخواتها)", desc: "تنصب المبتدأ وترفع الخبر", example: "إنّ الجوَ جميلٌ" },
+                                        { name: "أفعال المقاربة والرجاء والشروع", desc: "كاد وأخواتها (خبرها جملة فعلية مضارعية)", example: "كادَ المطرُ يهطلُ" }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    name: "3. مكملات الجملة (الفضلات والتوابع)",
+                    desc: "أسماء تضاف للجملة لتوضيح المعنى أو تأكيده.",
+                    children: [
+                        {
+                            name: "المنصوبات",
+                            children: [
+                                { name: "المفعول به", desc: "من وقع عليه الفعل", example: "شربتُ الماءَ" },
+                                { name: "المفعول المطلق", desc: "مصدر منصوب من جنس الفعل لتأكيده أو بيان نوعه", example: "ضربتهُ ضرباً" },
+                                { name: "المفعول لأجله", desc: "يبين سبب وقوع الفعل", example: "وقفتُ احتراماً للمعلم" },
+                                { name: "المفعول فيه (الظرف)", desc: "يبين زمان أو مكان الفعل", example: "سافرتُ صباحاً" },
+                                { name: "المفعول معه", desc: "اسم يقع بعد واو المعية", example: "سرتُ والبحرَ" },
+                                { name: "الحال", desc: "يبين هيئة الفاعل أو المفعول به", example: "جاء الطفلُ باكياً" },
+                                { name: "التمييز", desc: "يزيل الإبهام عن اسم أو جملة قبله", example: "اشتريتُ كيلوغراماً تفاحاً" },
+                                { name: "المستثنى", desc: "الاسم الواقع بعد أداة استثناء", example: "حضر الطلاب إلا زيداً" },
+                                { name: "المنادى", desc: "المطلوب إقباله بحرف نداء", example: "يا طالباً، اجتهد" }
+                            ]
+                        },
+                        {
+                            name: "المجرورات",
+                            children: [
+                                { name: "المجرور بحرف الجر", example: "ذهبتُ إلى المدرسةِ" },
+                                { name: "المجرور بالإضافة (المضاف إليه)", example: "كتابُ الرياضياتِ مفيد" }
+                            ]
+                        },
+                        {
+                            name: "التوابع",
+                            desc: "أسماء تتبع ما قبلها في الإعراب (رفعاً، نصباً، جراً)",
+                            children: [
+                                { name: "النعت (الصفة)", desc: "يصف اسماً قبله", example: "جاء الرجلُ الصالحُ" },
+                                { name: "العطف", desc: "يربط بين كلمتين بحرف عطف", example: "جاء محمدٌ وعليٌّ" },
+                                { name: "التوكيد", desc: "يؤكد ما قبله (لفظي أو معنوي)", example: "جاء الوزيرُ نفسُهُ" },
+                                { name: "البدل", desc: "تابع مقصود بالحكم بلا واسطة", example: "جاء الخليفةُ عمرُ" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    name: "4. الأساليب اللغوية الشائعة",
+                    desc: "تراكيب نحوية تؤدي أغراضاً بلاغية محددة.",
+                    children: [
+                        { name: "أسلوب الشرط", desc: "أداة + فعل شرط + جواب شرط", example: "إنْ تَدْرُسْ تَنْجَحْ" },
+                        { name: "أسلوب التعجب", desc: "صيغتا (ما أفعله) و (أفعل به)", example: "ما أجملَ السماءَ!" },
+                        { name: "أسلوب المدح والذم", desc: "باستخدام (نِعْمَ، بئس، حبّذا)", example: "نِعْمَ الخُلُقُ الصدقُ" },
+                        { name: "أسلوب الاختصاص", desc: "ضمير يليه اسم ظاهر منصوب يفسره", example: "نحن -العربَ- نكرم الضيف" },
+                        { name: "أسلوب الإغراء والتحذير", desc: "حث على محمود أو تحذير من مذموم", example: "الصدقَ الصدقَ / إياكَ والكذبَ" },
+                        { name: "أسلوب القسم", desc: "حرف قسم + مقسم به + جواب القسم", example: "واللهِ لأدرسنَّ" }
+                    ]
+                }
+            ]
+        };
+
+        const container = document.getElementById('mindmap-container');
+        let width = container.clientWidth;
+        let height = container.clientHeight;
+
+        // إعداد التكبير والتصغير
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                svgGroup.attr("transform", event.transform);
+            });
+
+        const svg = d3.select("#mindmap-container").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .call(zoom)
+            .on("dblclick.zoom", null); // منع التكبير المزدوج المزعج
+
+        const svgGroup = svg.append("g");
+
+        // مقاسات البطاقة وتخطيط الشجرة
+        const cardWidth = 320;
+        const cardHeight = 110;
+        const horizontalSpacing = 420; // مسافة أفقية واسعة للرسم من اليمين لليسار
+        const verticalSpacing = 160;
+
+        const tree = d3.tree().nodeSize([verticalSpacing, horizontalSpacing]);
+
+        const root = d3.hierarchy(treeData, d => d.children);
+        root.x0 = 0;
+        root.y0 = 0;
+
+        let i = 0;
+
+        function update(source) {
+            const treeData = tree(root);
+            const nodes = treeData.descendants();
+            const links = treeData.links();
+
+            // منطق RTL (Right-to-Left): العقدة الأب في اليمين والأبناء يتجهون نحو اليسار
+            nodes.forEach(d => { 
+                d.y = -(d.depth * horizontalSpacing); 
+            });
+
+            const node = svgGroup.selectAll('g.node')
+                .data(nodes, d => d.id || (d.id = ++i));
+
+            // إنشاء العقد الجديدة
+            const nodeEnter = node.enter().append('g')
+                .attr('class', 'node no-select')
+                .attr("transform", d => `translate(${source.y0},${source.x0})`)
+                .on('click', click);
+
+            // دمج HTML (Tailwind) داخل العقدة باستخدام foreignObject
+            const fo = nodeEnter.append("foreignObject")
+                .attr("width", cardWidth)
+                .attr("height", cardHeight)
+                // تمركز البطاقة على نقطة العقدة
+                .attr("x", -cardWidth / 2) 
+                .attr("y", -cardHeight / 2)
+                .style("overflow", "visible");
+
+            fo.append("xhtml:div")
+                .attr("class", d => `w-full h-full rounded-2xl shadow-sm border-2 p-4 flex flex-col justify-center bg-white hover:shadow-xl transition-all duration-300 relative group cursor-pointer ${d.depth === 0 ? 'border-blue-700 bg-blue-50/50' : (d.children || d._children ? 'border-blue-400' : 'border-emerald-400')}`)
+                .html(d => {
+                    const isRoot = d.depth === 0;
+                    const hasChildren = d.children || d._children;
+                    const indicatorColor = d._children ? 'bg-blue-500 shadow-blue-500/50 shadow-md' : (hasChildren ? 'bg-blue-200' : 'hidden');
+                    
+                    return `
+                    <!-- مؤشر التفرع (دائرة صغيرة يسار البطاقة) -->
+                    <div class="absolute w-4 h-4 rounded-full ${indicatorColor} -left-2 top-1/2 transform -translate-y-1/2 z-10 border-2 border-white transition-colors duration-300"></div>
+                    
+                    <h3 class="${isRoot ? 'text-xl' : 'text-base'} font-bold ${isRoot ? 'text-blue-900' : 'text-slate-800'} mb-1.5 leading-tight flex items-center justify-between">
+                        ${d.data.name}
+                        ${d._children ? '<span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-normal group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">+ مزيد</span>' : ''}
+                    </h3>
+                    
+                    ${d.data.desc ? `<p class="text-sm text-slate-600 mb-2 leading-snug">${d.data.desc}</p>` : ''}
+                    
+                    ${d.data.example ? `
+                        <div class="mt-auto bg-emerald-50/80 border border-emerald-100 rounded-lg px-2.5 py-1.5">
+                            <p class="text-[13px] font-semibold text-emerald-800 break-words leading-tight" dir="rtl">${d.data.example}</p>
+                        </div>
+                    ` : ''}
+                `});
+
+            const nodeUpdate = nodeEnter.merge(node);
+
+            // حركة انتقال العقد
+            nodeUpdate.transition()
+                .duration(600)
+                .attr("transform", d => `translate(${d.y},${d.x})`);
+
+            // تحديث حالة البطاقة عند التوسيع/الطي (إعادة رسم المحتوى)
+            nodeUpdate.select('foreignObject div')
+                .attr("class", d => `w-full h-full rounded-2xl shadow-sm border-2 p-4 flex flex-col justify-center bg-white hover:shadow-xl transition-all duration-300 relative group cursor-pointer ${d.depth === 0 ? 'border-blue-700 bg-blue-50/50' : (d.children || d._children ? 'border-blue-400' : 'border-emerald-400')}`)
+                .html(d => {
+                    const isRoot = d.depth === 0;
+                    const hasChildren = d.children || d._children;
+                    const indicatorColor = d._children ? 'bg-blue-500 shadow-blue-500/50 shadow-md' : (hasChildren ? 'bg-slate-200' : 'hidden');
+                    return `
+                    <div class="absolute w-4 h-4 rounded-full ${indicatorColor} -left-2 top-1/2 transform -translate-y-1/2 z-10 border-2 border-white transition-colors duration-300"></div>
+                    <h3 class="${isRoot ? 'text-xl' : 'text-base'} font-bold ${isRoot ? 'text-blue-900' : 'text-slate-800'} mb-1.5 leading-tight flex items-center justify-between">
+                        ${d.data.name}
+                        ${d._children ? '<span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-normal group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">+ تفاصيل</span>' : ''}
+                    </h3>
+                    ${d.data.desc ? `<p class="text-sm text-slate-600 mb-2 leading-snug">${d.data.desc}</p>` : ''}
+                    ${d.data.example ? `
+                        <div class="mt-auto bg-emerald-50/80 border border-emerald-100 rounded-lg px-2.5 py-1.5">
+                            <p class="text-[13px] font-semibold text-emerald-800 break-words leading-tight" dir="rtl">${d.data.example}</p>
+                        </div>
+                    ` : ''}
+                `});
+
+            // إزالة العقد المخفية
+            const nodeExit = node.exit().transition()
+                .duration(600)
+                .attr("transform", d => `translate(${source.y},${source.x})`)
+                .remove();
+
+            const link = svgGroup.selectAll('path.link')
+                .data(links, d => d.target.id);
+
+            const linkEnter = link.enter().insert('path', "g")
+                .attr("class", "link")
+                .attr('d', d => {
+                    const o = {x: source.x0, y: source.y0};
+                    return diagonal(o, o);
+                });
+
+            const linkUpdate = linkEnter.merge(link);
+
+            linkUpdate.transition()
+                .duration(600)
+                .attr('d', d => diagonal(d.source, d.target));
+
+            link.exit().transition()
+                .duration(600)
+                .attr('d', d => {
+                    const o = {x: source.x, y: source.y};
+                    return diagonal(o, o);
+                })
+                .remove();
+
+            nodes.forEach(d => {
+                d.x0 = d.x;
+                d.y0 = d.y;
+            });
+        }
+
+        // رسم منحنيات التوصيل (من حافة البطاقة اليمنى لحافة البطاقة اليسرى)
+        function diagonal(s, d) {
+            // بما أن البطاقات متمركزة، الروابط تبدأ من يسار الأب وتدخل يمين الابن
+            const startY = s.y - (cardWidth / 2);
+            const endY = d.y + (cardWidth / 2);
+            
+            return `M ${startY} ${s.x}
+                    C ${(startY + endY) / 2} ${s.x},
+                      ${(startY + endY) / 2} ${d.x},
+                      ${endY} ${d.x}`;
+        }
+
+        // حدث النقر لفتح أو طي التفرعات
+        function click(event, d) {
+            if (d.children) {
+                d._children = d.children;
+                d.children = null;
+            } else {
+                d.children = d._children;
+                d._children = null;
+            }
+            update(d);
+        }
+
+        // وظائف مساعدة للتوسيع والطي الشامل
+        function collapse(d) {
+            if (d.children) {
+                d._children = d.children;
+                d._children.forEach(collapse);
+                d.children = null;
+            }
+        }
+
+        function expand(d) {
+            if (d._children) {
+                d.children = d._children;
+                d._children = null;
+            }
+            if (d.children) {
+                d.children.forEach(expand);
+            }
+        }
+
+        // عند التحميل: طي كل شيء باستثناء المستوى الأول
+        root.children.forEach(child => {
+            if (child.children) {
+                child.children.forEach(collapse);
+            }
+        });
+
+        update(root);
+
+        // ضبط التمركز الابتدائي ليكون الجذر ظاهراً بوضوح في الجهة اليمنى
+        function centerRoot() {
+            const initialTransform = d3.zoomIdentity.translate(width - (cardWidth + 100), height / 2).scale(0.85);
+            svg.transition().duration(750).call(zoom.transform, initialTransform);
+        }
+        
+        // استدعاء التمركز بعد الرسم
+        centerRoot();
+
+        // ربط أزرار التحكم
+        document.getElementById('zoom-in').addEventListener('click', () => {
+            svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+        });
+
+        document.getElementById('zoom-out').addEventListener('click', () => {
+            svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+        });
+
+        document.getElementById('reset-zoom').addEventListener('click', centerRoot);
+
+        document.getElementById('collapse-all').addEventListener('click', () => {
+            root.children.forEach(collapse);
+            update(root);
+            centerRoot();
+        });
+
+        document.getElementById('expand-all').addEventListener('click', () => {
+            expand(root);
+            update(root);
+        });
+
+        // التعامل مع تغير حجم النافذة
+        window.addEventListener('resize', () => {
+            width = container.clientWidth;
+            height = container.clientHeight;
+            svg.attr("width", width).attr("height", height);
+        });
+
+    </script>
+</body>
+</html>
